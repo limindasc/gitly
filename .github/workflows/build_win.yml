@@ -1,4 +1,4 @@
-name: CI/CD fuck
+name: Last Try
 
 on:
   push:
@@ -23,18 +23,23 @@ jobs:
         with:
           path: gitly
 
+      - name: Install Markdown
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/markdown
+          path: vlib/markdown
+
+      - name: Install SQLite
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/sqlite
+          path: vlib/sqlite
+
       - name: Build V
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           makev.bat -gcc
-
-      - name: Install dependencies
-        shell: cmd
-        run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe install markdown
-          v.exe install sqlite
 
       - name: Compile gitly
         shell: cmd
@@ -92,18 +97,23 @@ jobs:
         with:
           path: gitly
 
+      - name: Install Markdown
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/markdown
+          path: vlib/markdown
+
+      - name: Install SQLite
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/sqlite
+          path: vlib/sqlite
+
       - name: Build V
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
           makev.bat -msvc
-
-      - name: Install dependencies
-        shell: cmd
-        run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe install markdown
-          v.exe install sqlite
 
       - name: Compile gitly
         shell: cmd

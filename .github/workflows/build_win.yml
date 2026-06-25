@@ -1,4 +1,4 @@
-name: CI
+name: win build
 
 on: [push, pull_request]
 

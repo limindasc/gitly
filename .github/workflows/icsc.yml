@@ -10,12 +10,10 @@ on:
 jobs:
   build-rhel:
     name: Build on RHEL
-    runs-on: ubuntu-latest          # GH has no RHEL runner; use container instead
+    runs-on: ubuntu-latest
     container:
-      image: redhat/ubi9:latest     # RHEL 9 UBI — free, no subscription needed
-
-    env:
-      ICSC_HOME: /opt/icsc
+      image: redhat/ubi9:latest
+      options: --user root
 
     steps:
       - name: Install system dependencies
@@ -28,48 +26,36 @@ jobs:
             git \
             python3
 
-      - name: Checkout ICSC
-        uses: actions/checkout@v4
-        with:
-          repository: intel/systemc-compiler
-          path: ${{ env.ICSC_HOME }}/icsc
-
-      - name: Run install.sh
-        working-directory: ${{ env.ICSC_HOME }}/icsc
+      - name: Clone and build ICSC
         run: |
-          export ICSC_HOME=${{ env.ICSC_HOME }}
+          export ICSC_HOME=$HOME/icsc_home
+          mkdir -p $ICSC_HOME
+          git clone --depth 1 https://github.com/intel/systemc-compiler $ICSC_HOME/icsc
+          cd $ICSC_HOME/icsc
           bash install.sh
 
-      - name: Upload ICSC binaries
+      - name: Package artifact
+        run: |
+          tar -czf icsc-rhel9.tar.gz \
+            -C $HOME/icsc_home \
+            bin lib lib64 include
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: icsc-rhel9
-          path: |
-            ${{ env.ICSC_HOME }}/bin/
-            ${{ env.ICSC_HOME }}/lib/
-            ${{ env.ICSC_HOME }}/lib64/
-            ${{ env.ICSC_HOME }}/include/
+          path: icsc-rhel9.tar.gz
           if-no-files-found: warn
-
-      - name: Package for release
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          tar -czf icsc-rhel9-${{ github.ref_name }}.tar.gz \
-            -C ${{ env.ICSC_HOME }} \
-            bin lib lib64 include
 
       - name: Upload release asset
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: icsc-rhel9-${{ github.ref_name }}.tar.gz
+          files: icsc-rhel9.tar.gz
 
   build-wsl:
     name: Build on WSL (Ubuntu)
     runs-on: windows-latest
-
-    env:
-      ICSC_HOME: /opt/icsc
 
     steps:
       - name: Enable WSL2 and install Ubuntu
@@ -84,31 +70,24 @@ jobs:
             git
             python3
 
-      - name: Checkout ICSC inside WSL
+      - name: Clone and build ICSC inside WSL
         shell: wsl-bash {0}
         run: |
+          export ICSC_HOME=$HOME/icsc_home
           mkdir -p $ICSC_HOME
           git clone --depth 1 https://github.com/intel/systemc-compiler $ICSC_HOME/icsc
-
-      - name: Run install.sh inside WSL
-        shell: wsl-bash {0}
-        run: |
-          export ICSC_HOME=$ICSC_HOME
           cd $ICSC_HOME/icsc
           bash install.sh
 
-      - name: Package artifact from WSL
+      - name: Package artifact
         shell: wsl-bash {0}
         run: |
-          tar -czf /tmp/icsc-wsl-ubuntu.tar.gz \
-            -C $ICSC_HOME \
+          tar -czf $HOME/icsc-wsl-ubuntu.tar.gz \
+            -C $HOME/icsc_home \
             bin lib lib64 include
+          cp $HOME/icsc-wsl-ubuntu.tar.gz "$(wslpath '${{ github.workspace }}')/icsc-wsl-ubuntu.tar.gz"
 
-      - name: Copy tarball to Windows workspace
-        shell: wsl-bash {0}
-        run: cp /tmp/icsc-wsl-ubuntu.tar.gz "${{ github.workspace }}/icsc-wsl-ubuntu.tar.gz"
-
-      - name: Upload WSL artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: icsc-wsl-ubuntu

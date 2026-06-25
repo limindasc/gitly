@@ -38,7 +38,9 @@ jobs:
       - name: Build V
         shell: cmd
         run: |
+          ls
           cd %GITHUB_WORKSPACE%
+          ls
           make.bat -gcc
 
       - name: Install bundled SQLite
@@ -118,7 +120,9 @@ jobs:
       - name: Build V
         shell: cmd
         run: |
+          ls
           cd %GITHUB_WORKSPACE%
+          ls
           make.bat -msvc
 
       - name: Install bundled SQLite

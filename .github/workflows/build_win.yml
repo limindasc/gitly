@@ -32,18 +32,18 @@ jobs:
 
       - name: Build V
         run: |
-          .\make.bat -gcc
+          make.bat -gcc
           ls
 
       - name: Install bundled SQLite
         run: |
-          .\v.exe install sqlite
+          v.exe install sqlite
           ls
 
       - name: Compile gitly
         run: |
           dir
-          .\v.exe -cc gcc gitly
+          v.exe -cc gcc gitly
           ls
 
       - name: Upload artifacts

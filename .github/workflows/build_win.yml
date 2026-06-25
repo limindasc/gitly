@@ -1,0 +1,54 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  windows-gcc:
+    runs-on: windows-latest
+    env:
+      VFLAGS: -cc gcc
+    steps:
+      - name: Checkout V
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/v
+
+      - name: Checkout gitly
+        uses: actions/checkout@v3
+        with:
+          path: gitly
+
+      - name: Install Markdown
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/markdown
+          path: vlib/markdown
+
+      - name: Install PCRE
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/pcre
+          path: vlib/pcre
+
+      - name: Build V
+        run: |
+          ./make.bat -gcc
+
+      - name: Install bundled SQLite
+        run: |
+          .\v.exe install sqlite
+
+      - name: Compile gitly
+        run: |
+          dir
+          .\v.exe -cc gcc gitly
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-windows-gcc
+          path: |
+            gitly\gitly.exe
+            gitly\static\
+            gitly\templates\
+          if-no-files-found: warn

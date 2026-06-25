@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD fuck
 
 on:
   push:
@@ -23,45 +23,31 @@ jobs:
         with:
           path: gitly
 
-      - name: Install Markdown
-        uses: actions/checkout@v3
-        with:
-          repository: vlang/markdown
-          path: vlib/markdown
-
-      - name: Install PCRE
-        uses: actions/checkout@v3
-        with:
-          repository: vlang/pcre
-          path: vlib/pcre
-
       - name: Build V
         shell: cmd
         run: |
-          ls
           cd %GITHUB_WORKSPACE%
-          ls
-          echo " FUCKING STARTED\n=================="
-          make -gcc
+          makev.bat -gcc
 
-      - name: Install bundled SQLite
+      - name: Install dependencies
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
+          v.exe install markdown
           v.exe install sqlite
 
       - name: Compile gitly
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe -cc gcc gitly
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc gcc -d sqlite .
 
       - name: Compile gitly (prod)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe -cc gcc -prod gitly
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc gcc -d sqlite -prod .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -106,44 +92,31 @@ jobs:
         with:
           path: gitly
 
-      - name: Install Markdown
-        uses: actions/checkout@v3
-        with:
-          repository: vlang/markdown
-          path: vlib/markdown
-
-      - name: Install PCRE
-        uses: actions/checkout@v3
-        with:
-          repository: vlang/pcre
-          path: vlib/pcre
-
       - name: Build V
         shell: cmd
         run: |
-          ls
           cd %GITHUB_WORKSPACE%
-          ls
-          make.bat -msvc
+          makev.bat -msvc
 
-      - name: Install bundled SQLite
+      - name: Install dependencies
         shell: cmd
         run: |
           cd %GITHUB_WORKSPACE%
+          v.exe install markdown
           v.exe install sqlite
 
       - name: Compile gitly
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe -cc msvc gitly
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc msvc -d sqlite .
 
       - name: Compile gitly (prod)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: cmd
         run: |
-          cd %GITHUB_WORKSPACE%
-          v.exe -cc msvc -prod gitly
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc msvc -d sqlite -prod .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

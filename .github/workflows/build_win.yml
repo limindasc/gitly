@@ -41,7 +41,8 @@ jobs:
           ls
           cd %GITHUB_WORKSPACE%
           ls
-          make.bat -gcc
+          echo " FUCKING STARTED\n=================="
+          make -gcc
 
       - name: Install bundled SQLite
         shell: cmd

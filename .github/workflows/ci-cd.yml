@@ -1,0 +1,362 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ['**']
+    tags:
+      - 'v*'
+  pull_request:
+
+jobs:
+  # ─── Windows GCC ────────────────────────────────────────────────────────────
+  windows-gcc:
+    runs-on: windows-latest
+    env:
+      VFLAGS: -cc gcc
+    steps:
+      - name: Checkout V
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/v
+
+      - name: Checkout gitly
+        uses: actions/checkout@v3
+        with:
+          path: gitly
+
+      - name: Install Markdown
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/markdown
+          path: vlib/markdown
+
+      - name: Build V
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          makev.bat -gcc
+
+      - name: Install SQLite amalgamation
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          v.exe run vlib/db/sqlite/install_thirdparty_sqlite.vsh
+
+      - name: Compile gitly
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc gcc -d sqlite .
+
+      - name: Compile gitly (prod)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc gcc -d sqlite -prod .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-windows-gcc
+          path: |
+            gitly\gitly.exe
+            gitly\static\
+            gitly\templates\
+          if-no-files-found: warn
+
+      - name: Package for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          mkdir dist\gitly-windows-gcc
+          copy gitly\gitly.exe dist\gitly-windows-gcc\
+          xcopy /E /I gitly\static    dist\gitly-windows-gcc\static
+          xcopy /E /I gitly\templates dist\gitly-windows-gcc\templates
+          cd dist
+          powershell Compress-Archive -Path gitly-windows-gcc -DestinationPath gitly-windows-gcc.zip
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist\gitly-windows-gcc.zip
+
+  # ─── Windows MSVC ───────────────────────────────────────────────────────────
+  windows-msvc:
+    runs-on: windows-latest
+    env:
+      VFLAGS: -cc msvc
+    steps:
+      - name: Checkout V
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/v
+
+      - name: Checkout gitly
+        uses: actions/checkout@v3
+        with:
+          path: gitly
+
+      - name: Install Markdown
+        uses: actions/checkout@v3
+        with:
+          repository: vlang/markdown
+          path: vlib/markdown
+
+      - name: Build V
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          makev.bat -msvc
+
+      - name: Install SQLite amalgamation
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          v.exe run vlib/db/sqlite/install_thirdparty_sqlite.vsh
+
+      - name: Compile gitly
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc msvc -d sqlite .
+
+      - name: Compile gitly (prod)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%\gitly
+          ..\v.exe -cc msvc -d sqlite -prod .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-windows-msvc
+          path: |
+            gitly\gitly.exe
+            gitly\static\
+            gitly\templates\
+          if-no-files-found: warn
+
+      - name: Package for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: cmd
+        run: |
+          cd %GITHUB_WORKSPACE%
+          mkdir dist\gitly-windows-msvc
+          copy gitly\gitly.exe dist\gitly-windows-msvc\
+          xcopy /E /I gitly\static    dist\gitly-windows-msvc\static
+          xcopy /E /I gitly\templates dist\gitly-windows-msvc\templates
+          cd dist
+          powershell Compress-Archive -Path gitly-windows-msvc -DestinationPath gitly-windows-msvc.zip
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist\gitly-windows-msvc.zip
+
+  # ─── Red Hat (Rocky Linux 10) ───────────────────────────────────────────────
+  linux-redhat:
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux/rockylinux:10
+      options: --user root
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y \
+            gcc \
+            make \
+            git \
+            sqlite-devel \
+            libpq-devel
+
+      - name: Install V
+        run: |
+          git clone --depth 1 https://github.com/vlang/v $HOME/vlang
+          cd $HOME/vlang
+          make
+          ln -s $HOME/vlang/v /usr/local/bin/v
+
+      - name: Checkout gitly
+        run: |
+          git clone --depth 1 $GITHUB_SERVER_URL/$GITHUB_REPOSITORY $HOME/gitly
+          cd $HOME/gitly && git checkout $GITHUB_SHA
+
+      - name: Install Markdown
+        run: |
+          git clone --depth 1 https://github.com/vlang/markdown $HOME/vlang/vlib/markdown
+
+      - name: Install SQLite amalgamation
+        run: |
+          cd $HOME/vlang
+          v run vlib/db/sqlite/install_thirdparty_sqlite.vsh
+
+      - name: Compile gitly
+        run: |
+          cd $HOME/gitly
+          v -d sqlite .
+
+      - name: Compile gitly (prod)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd $HOME/gitly
+          v -d sqlite -prod .
+
+      - name: Package artifact
+        run: |
+          tar -czf $GITHUB_WORKSPACE/gitly-redhat.tar.gz \
+            -C $HOME/gitly \
+            gitly static templates
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-redhat
+          path: gitly-redhat.tar.gz
+          if-no-files-found: warn
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gitly-redhat.tar.gz
+
+  # ─── Debian ─────────────────────────────────────────────────────────────────
+  linux-debian:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --user root
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            gcc \
+            make \
+            git \
+            libsqlite3-dev \
+            libpq-dev
+
+      - name: Install V
+        run: |
+          git clone --depth 1 https://github.com/vlang/v $HOME/vlang
+          cd $HOME/vlang
+          make
+          ln -s $HOME/vlang/v /usr/local/bin/v
+
+      - name: Checkout gitly
+        run: |
+          git clone --depth 1 $GITHUB_SERVER_URL/$GITHUB_REPOSITORY $HOME/gitly
+          cd $HOME/gitly && git checkout $GITHUB_SHA
+
+      - name: Install Markdown
+        run: |
+          git clone --depth 1 https://github.com/vlang/markdown $HOME/vlang/vlib/markdown
+
+      - name: Install SQLite amalgamation
+        run: |
+          cd $HOME/vlang
+          v run vlib/db/sqlite/install_thirdparty_sqlite.vsh
+
+      - name: Compile gitly
+        run: |
+          cd $HOME/gitly
+          v -d sqlite .
+
+      - name: Compile gitly (prod)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd $HOME/gitly
+          v -d sqlite -prod .
+
+      - name: Package artifact
+        run: |
+          tar -czf $GITHUB_WORKSPACE/gitly-debian.tar.gz \
+            -C $HOME/gitly \
+            gitly static templates
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-debian
+          path: gitly-debian.tar.gz
+          if-no-files-found: warn
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gitly-debian.tar.gz
+
+  # ─── Alpine ─────────────────────────────────────────────────────────────────
+  linux-alpine:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+      options: --user root
+    steps:
+      - name: Install dependencies
+        run: |
+          apk update && apk add --no-cache \
+            gcc \
+            musl-dev \
+            make \
+            git \
+            sqlite-dev \
+            libpq \
+            bash
+
+      - name: Install V
+        run: |
+          git clone --depth 1 https://github.com/vlang/v $HOME/vlang
+          cd $HOME/vlang
+          make
+          ln -s $HOME/vlang/v /usr/local/bin/v
+
+      - name: Checkout gitly
+        run: |
+          git clone --depth 1 $GITHUB_SERVER_URL/$GITHUB_REPOSITORY $HOME/gitly
+          cd $HOME/gitly && git checkout $GITHUB_SHA
+
+      - name: Install Markdown
+        run: |
+          git clone --depth 1 https://github.com/vlang/markdown $HOME/vlang/vlib/markdown
+
+      - name: Install SQLite amalgamation
+        run: |
+          cd $HOME/vlang
+          v run vlib/db/sqlite/install_thirdparty_sqlite.vsh
+
+      - name: Compile gitly
+        run: |
+          cd $HOME/gitly
+          v -d sqlite .
+
+      - name: Compile gitly (prod)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd $HOME/gitly
+          v -d sqlite -prod .
+
+      - name: Package artifact
+        run: |
+          tar -czf $GITHUB_WORKSPACE/gitly-alpine.tar.gz \
+            -C $HOME/gitly \
+            gitly static templates
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitly-alpine
+          path: gitly-alpine.tar.gz
+          if-no-files-found: warn
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gitly-alpine.tar.gz

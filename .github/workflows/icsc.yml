@@ -1,4 +1,4 @@
-name: ICSC Build Machine 
+name: ICSC Build Machine Pro
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  build-rhel:
+  building-rhel:
     name: Build on RHEL
     runs-on: ubuntu-latest
     container:
@@ -65,7 +65,7 @@ jobs:
         with:
           files: icsc-rhel9.tar.gz
 
-  build-wsl:
+  building-wsl-via-ubuntu:
     name: Build on WSL (Ubuntu)
     runs-on: windows-latest
 

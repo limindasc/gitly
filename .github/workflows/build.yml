@@ -1,4 +1,4 @@
-name: CI/CD
+name: Build And Release 
 
 on:
   push:
@@ -159,7 +159,7 @@ jobs:
           files: dist\gitly-windows-msvc.zip
 
   # ─── Red Hat (Rocky Linux 10) ───────────────────────────────────────────────
-  linux-redhat:
+  linux-rpm-redhat:
     runs-on: ubuntu-latest
     container:
       image: rockylinux/rockylinux:10

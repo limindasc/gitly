@@ -1,4 +1,4 @@
-name: ICSC Build
+name: ICSC Build Machine 
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
     name: Build on RHEL
     runs-on: ubuntu-latest
     container:
-      image: redhat/ubi9:latest
+      image: rockylinux/rockylinux:10
       options: --user root
 
     steps:
@@ -26,8 +26,6 @@ jobs:
             git \
             python3 \
             xz \
-            xz-utils \
-            tar
 
       - name: Clone ICSC
         run: |
@@ -83,8 +81,6 @@ jobs:
             wget
             git
             python3
-            xz-utils
-            tar
 
       - name: Clone and build ICSC inside WSL
         shell: wsl-bash {0}

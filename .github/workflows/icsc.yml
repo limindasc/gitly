@@ -24,21 +24,35 @@ jobs:
             make \
             wget \
             git \
-            python3
+            python3 \
+            xz \
+            xz-utils \
+            tar
 
-      - name: Clone and build ICSC
+      - name: Clone ICSC
         run: |
           export ICSC_HOME=$HOME/icsc_home
           mkdir -p $ICSC_HOME
           git clone --depth 1 https://github.com/intel/systemc-compiler $ICSC_HOME/icsc
-          cd $ICSC_HOME/icsc
-          bash install.sh
+
+      - name: Run install.sh
+        run: |
+          export ICSC_HOME=$HOME/icsc_home
+          cd $ICSC_HOME
+          icsc/install.sh
+
+      - name: List install output
+        run: ls -la $HOME/icsc_home/
 
       - name: Package artifact
         run: |
-          tar -czf icsc-rhel9.tar.gz \
-            -C $HOME/icsc_home \
-            bin lib lib64 include
+          export ICSC_HOME=$HOME/icsc_home
+          cd $ICSC_HOME
+          tar -czf $HOME/icsc-rhel9.tar.gz \
+            $(ls -d bin build designs include lib lib64 share libexec setenv.sh 2>/dev/null | tr '\n' ' ')
+
+      - name: Copy tarball to workspace
+        run: cp $HOME/icsc-rhel9.tar.gz $GITHUB_WORKSPACE/icsc-rhel9.tar.gz
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -69,6 +83,8 @@ jobs:
             wget
             git
             python3
+            xz-utils
+            tar
 
       - name: Clone and build ICSC inside WSL
         shell: wsl-bash {0}
@@ -76,15 +92,16 @@ jobs:
           export ICSC_HOME=$HOME/icsc_home
           mkdir -p $ICSC_HOME
           git clone --depth 1 https://github.com/intel/systemc-compiler $ICSC_HOME/icsc
-          cd $ICSC_HOME/icsc
-          bash install.sh
+          cd $ICSC_HOME
+          icsc/install.sh
 
-      - name: Package artifact
+      - name: Package and copy artifact
         shell: wsl-bash {0}
         run: |
+          export ICSC_HOME=$HOME/icsc_home
+          cd $ICSC_HOME
           tar -czf $HOME/icsc-wsl-ubuntu.tar.gz \
-            -C $HOME/icsc_home \
-            bin lib lib64 include
+            $(ls -d bin build designs include lib lib64 share libexec setenv.sh 2>/dev/null | tr '\n' ' ')
           cp $HOME/icsc-wsl-ubuntu.tar.gz "$(wslpath '${{ github.workspace }}')/icsc-wsl-ubuntu.tar.gz"
 
       - name: Upload artifact
